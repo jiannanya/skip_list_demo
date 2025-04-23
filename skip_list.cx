@@ -1,0 +1,168 @@
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+
+const int MAX_LEVEL = 16;
+
+// 跳表节点类
+template <typename T>
+class SkipListNode {
+public:
+    T key;
+    SkipListNode** forward;
+
+    SkipListNode(T k, int level) : key(k) {
+        forward = new SkipListNode*[level + 1];
+        for (int i = 0; i <= level; ++i) {
+            forward[i] = nullptr;
+        }
+    }
+
+    ~SkipListNode() {
+        delete[] forward;
+    }
+};
+
+// 跳表类
+template <typename T>
+class SkipList {
+private:
+    int level;
+    SkipListNode<T>* head;
+
+    int randomLevel() {
+        int lvl = 0;
+        while ((rand() % 2) == 0 && lvl < MAX_LEVEL) {
+            lvl++;
+        }
+        return lvl;
+    }
+
+public:
+    SkipList() : level(0) {
+        head = new SkipListNode<T>(0, MAX_LEVEL);
+        srand(time(0));
+    }
+
+    ~SkipList() {
+        SkipListNode<T>* current = head;
+        while (current != nullptr) {
+            SkipListNode<T>* temp = current;
+            current = current->forward[0];
+            delete temp;
+        }
+    }
+
+    void insert(T key) {
+        SkipListNode<T>* update[MAX_LEVEL + 1];
+        SkipListNode<T>* current = head;
+
+        for (int i = level; i >= 0; --i) {
+            while (current->forward[i] != nullptr && current->forward[i]->key < key) {
+                current = current->forward[i];
+            }
+            update[i] = current;
+        }
+
+        current = current->forward[0];
+
+        if (current == nullptr || current->key != key) {
+            int newLevel = randomLevel();
+
+            if (newLevel > level) {
+                for (int i = level + 1; i <= newLevel; ++i) {
+                    update[i] = head;
+                }
+                level = newLevel;
+            }
+
+            SkipListNode<T>* newNode = new SkipListNode<T>(key, newLevel);
+
+            for (int i = 0; i <= newLevel; ++i) {
+                newNode->forward[i] = update[i]->forward[i];
+                update[i]->forward[i] = newNode;
+            }
+        }
+    }
+
+    bool search(T key) {
+        SkipListNode<T>* current = head;
+
+        for (int i = level; i >= 0; --i) {
+            while (current->forward[i] != nullptr && current->forward[i]->key < key) {
+                current = current->forward[i];
+            }
+        }
+
+        current = current->forward[0];
+
+        return (current != nullptr && current->key == key);
+    }
+
+    void remove(T key) {
+        SkipListNode<T>* update[MAX_LEVEL + 1];
+        SkipListNode<T>* current = head;
+
+        for (int i = level; i >= 0; --i) {
+            while (current->forward[i] != nullptr && current->forward[i]->key < key) {
+                current = current->forward[i];
+            }
+            update[i] = current;
+        }
+
+        current = current->forward[0];
+
+        if (current != nullptr && current->key == key) {
+            for (int i = 0; i <= level; ++i) {
+                if (update[i]->forward[i] != current) {
+                    break;
+                }
+                update[i]->forward[i] = current->forward[i];
+            }
+
+            delete current;
+
+            while (level > 0 && head->forward[level] == nullptr) {
+                level--;
+            }
+        }
+    }
+
+    void display() {
+        for (int i = level; i >= 0; --i) {
+            SkipListNode<T>* current = head->forward[i];
+            std::cout << "Level " << i << ": ";
+            while (current != nullptr) {
+                std::cout << current->key << " ";
+                current = current->forward[i];
+            }
+            std::cout << std::endl;
+        }
+    }
+};
+
+int main() {
+    SkipList<int> skipList;
+
+    skipList.insert(3);
+    skipList.insert(6);
+    skipList.insert(7);
+    skipList.insert(9);
+    skipList.insert(12);
+    skipList.insert(19);
+    skipList.insert(17);
+    skipList.insert(26);
+    skipList.insert(21);
+    skipList.insert(25);
+
+    std::cout << "Skip List after insertion:" << std::endl;
+    skipList.display();
+
+    std::cout << "Search for 19: " << (skipList.search(19) ? "Found" : "Not Found") << std::endl;
+
+    skipList.remove(19);
+    std::cout << "Skip List after removing 19:" << std::endl;
+    skipList.display();
+
+    return 0;
+}    
